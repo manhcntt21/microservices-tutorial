@@ -28,6 +28,8 @@ public class InventoryService {
         /**
          * mô tả tình huống hiệu năng database kém, vượt quá timout của circuit breaker là 3s
          * trong application.properties
+         * khi thay thời gian sleep nhỏ hơn timeout-duration trong application.properties thì không xảy ra timeout nữa
+         * ví dụ 2s
          */
         log.info("checking in stock");
         log.info("wait started");
