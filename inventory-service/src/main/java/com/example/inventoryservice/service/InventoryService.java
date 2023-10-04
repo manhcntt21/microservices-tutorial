@@ -3,6 +3,7 @@ package com.example.inventoryservice.service;
 import com.example.inventoryservice.dto.InventoryResponse;
 import com.example.inventoryservice.repository.InventoryRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,8 +23,16 @@ public class InventoryService {
     private final InventoryRepository inventoryRepository;
 
     @Transactional(readOnly = true)
+    @SneakyThrows
     public List<InventoryResponse> isInStock(List<String> skuCode) {
+        /**
+         * mô tả tình huống hiệu năng database kém, vượt quá timout của circuit breaker là 3s
+         * trong application.properties
+         */
         log.info("checking in stock");
+        log.info("wait started");
+        Thread.sleep(10000);
+        log.info("wait ended");
         return inventoryRepository.findBySkuCodeIn(skuCode).stream()
                 .map(inventory ->
                     InventoryResponse.builder()
