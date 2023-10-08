@@ -1,0 +1,123 @@
+version: "3.8"
+services:
+    ## Mongo Database
+    mongodb:
+        image : mongo
+        container_name: mongodb
+        environment:
+            - PUID=1000
+            - PGID=1000
+        volumes:
+            - mongodb:/data/db
+        ports:
+            - 27017:27017
+        restart: unless-stopped
+        networks:
+            - store_network
+    
+    ## Change MYSQL to Posgresql
+    postgres-order:
+        image: postgres
+        restart: always
+        environment:
+            - POSTGRES_USER=root
+            - POSTGRES_PASSWORD=root
+            - POSTGRES_DB=order-service
+        expose:
+            - 5431
+        ports:
+            - 5431:5431
+        command: -p 5431
+        volumes:
+            - postgres_order_data:/var/lib/postgresql/data:rw
+        networks:
+            - store_network
+            
+    postgres-inventory:
+        image: postgres
+        restart: always
+        environment:
+            - POSTGRES_USER=root
+            - POSTGRES_PASSWORD=root
+            - POSTGRES_DB=inventory-service
+        ports:
+            - 5433:5432
+        volumes:
+            - postgres_inventory_data:/var/lib/postgresql/data:rw
+        networks:
+            - store_network 
+    ## Database for keycloak
+    keycloak-mysql:
+        container_name: keycloak-mysql
+        image: mysql:5.7
+        volumes:
+            - keycloak_database:/var/lib/mysql
+        environment:
+            - MYSQL_ROOT_PASSWORD=root
+            - MYSQL_DATABASE=keycloak
+            - MYSQL_USER=keycloak
+            - MYSQL_PASSWORD=password
+        networks:
+            - store_network             
+    keycloak:
+        image: quay.io/keycloak/keycloak:18.0.0
+        environment:
+            - KEYCLOAK_ADMIN=admin
+            - KEYCLOAK_ADMIN_PASSWORD=admin123
+            - KEYCLOAK_LOGLEVEL=INFO
+            - ROOT_LOGLEVEL=INFO
+        command: ["start-dev", "--import-realm"]
+        volumes:
+            - ./realms/:/opt/keycloak/data/import/            
+        ports:
+            - "8181:8080" 
+        depends_on:
+            - keycloak-mysql
+        networks:
+            - store_network
+    ## distributed tracing            
+    zipkin:
+        image: ghcr.io/openzipkin/zipkin-slim
+        container_name: zipkin
+        ports:
+            - 9411:9411
+        networks:
+            - store_network   
+    ## message system with kafka
+    zookeeper:
+        image: confluentinc/cp-zookeeper:7.0.1
+        container_name: zookeeper
+        environment:
+            - ZOOKEEPER_CLIENT_PORT=2181
+            - ZOOKEEPER_TICK_TIME=2000
+        ports:
+            - 2181:2181
+        networks:
+            - store_network
+    broker:
+        image: confluentinc/cp-kafka:7.0.1
+        container_name: broker
+        depends_on:
+            - zookeeper
+        ports:
+            - 9092:9092
+        environment:
+            - KAFKA_BROKER_ID=1
+            - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
+            - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
+            - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://broker:29092
+            - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+            - KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1
+            - KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1
+        networks:
+            - store_network
+            
+networks:
+    store_network:
+        name: store_network
+volumes:
+    postgres_order_data:
+    postgres_inventory_data:
+    mongodb:
+    keycloak_database:
+    
