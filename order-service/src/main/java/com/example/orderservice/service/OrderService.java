@@ -7,6 +7,8 @@ import com.example.orderservice.entity.Order;
 import com.example.orderservice.entity.OrderLineItems;
 import com.example.orderservice.event.OrderPlacedEvent;
 import com.example.orderservice.repository.OrderRepository;
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.ObservationRegistry;
 import lombok.RequiredArgsConstructor;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
@@ -28,6 +30,7 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final KafkaTemplate<String, OrderPlacedEvent> kafkaTemplate;
     private final WebClient.Builder webclientBuilder;
+    private final ObservationRegistry observationRegistry;
 
     public String placeOrder(OrderRequest orderRequest) {
         Order order = new Order();
@@ -49,26 +52,32 @@ public class OrderService {
 //                .stream()
 //                .map(OrderLineItems::getSkuCode)
 //                .toList();
-        // todo: call inventory service and place order if product is in stock
-        InventoryResponse[] inventoryResponseArray = webclientBuilder.build().get()
-                .uri("http://INVENTORY-SERVICE/api/v1/inventory",
-                        uriBuilder -> uriBuilder.queryParam("skuCode", skuCodes).build())
-                .retrieve()
-                .bodyToMono(InventoryResponse[].class)
-                .block();
+        // call stock
+        Observation inventoryServiceObservation = Observation.createNotStarted("inventory-service-lookup",
+                this.observationRegistry);
+        inventoryServiceObservation.lowCardinalityKeyValue("call", "inventory-service");
+        return inventoryServiceObservation.observe(() -> {
+            // todo: call inventory service and place order if product is in stock
+            InventoryResponse[] inventoryResponseArray = webclientBuilder.build().get()
+                    .uri("http://INVENTORY-SERVICE/api/v1/inventory",
+                            uriBuilder -> uriBuilder.queryParam("skuCode", skuCodes).build())
+                    .retrieve()
+                    .bodyToMono(InventoryResponse[].class)
+                    .block();
 
 //        Arrays.stream(inventoryResponseArray).allMatch(inventoryResponse -> inventoryResponse.isInSock());
-        boolean allProductIsInStock = Arrays.stream(inventoryResponseArray)
-                .allMatch(InventoryResponse::isInSock);
-        // todo: if all products is in stock, save order
-        if(allProductIsInStock) {
-            orderRepository.save(order);
-            // todo: produce messgae
-            kafkaTemplate.send("notificationTopic", new OrderPlacedEvent(order.getOrderNumber()));
-            return "order placed successfully";
-        } else {
-            throw new IllegalArgumentException("Product is not in stock, please try again");
-        }
+            boolean allProductIsInStock = Arrays.stream(inventoryResponseArray)
+                    .allMatch(InventoryResponse::isInSock);
+            // todo: if all products is in stock, save order
+            if(allProductIsInStock) {
+                orderRepository.save(order);
+                // todo: produce messgae
+                kafkaTemplate.send("notificationTopic", new OrderPlacedEvent(order.getOrderNumber()));
+                return "order placed successfully";
+            } else {
+                throw new IllegalArgumentException("Product is not in stock, please try again");
+            }
+        });
     }
 
     private OrderLineItems mapToDto(OrderLineItemsDto orderLineItemsDto) {
