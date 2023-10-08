@@ -33,7 +33,8 @@ public class InventoryService {
          */
         log.info("checking in stock");
         log.info("wait started");
-        Thread.sleep(10000);
+//        Thread.sleep(10000);
+        Thread.sleep(2000);
         log.info("wait ended");
         return inventoryRepository.findBySkuCodeIn(skuCode).stream()
                 .map(inventory ->
