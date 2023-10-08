@@ -20,7 +20,8 @@ import java.util.List;
 @AllArgsConstructor
 public class Order {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @SequenceGenerator(name = "order_id_sequence", sequenceName = "order_id_sequence")
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "order_id_sequence")
     private Long id;
     private String orderNumber;
     @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL)

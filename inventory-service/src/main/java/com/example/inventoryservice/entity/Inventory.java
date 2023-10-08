@@ -18,7 +18,8 @@ import lombok.Setter;
 @NoArgsConstructor
 public class Inventory {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @SequenceGenerator(name = "inventory_id_sequence", sequenceName = "inventory_id_sequence")
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "inventory_id_sequence")
     private Long id;
     private String skuCode;
     private Integer quantity;
