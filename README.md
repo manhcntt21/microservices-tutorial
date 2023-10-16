@@ -78,3 +78,5 @@ Ví dụ:
 
 ### 6 Message Queue
 Mình dùng kafka, ngoài ra các bạn có thể dùng RabbitMQ, ở đây mình triển khai đơn giản nên chưa có nhiều sự khác biệt, mình cũng không có nhiều kinh nghiệm về cái này, chỉ đơn giản là log event, khi order thành công sẽ produce một message đến broker và **inventory service** sẽ consume nó, ở đây các bạn hoàn toàn có thể gửi email hoặc tin nhắn đến điện thoại,...
+### 7 Nên làm
+Nếu cảm thấy hữu ích đừng ngần ngại gửi tặng tôi một ngôi sao (star) để tôi có động lực hơn hoàn thành những giáo án chất lượng, cám ơn các bạn rất nhiều.
